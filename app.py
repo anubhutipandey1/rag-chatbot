@@ -1,6 +1,9 @@
 import streamlit as st
 import chromadb
-import ollama
+from groq import Groq
+import os
+from dotenv import load_dotenv
+load_dotenv()
 import fitz
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
@@ -117,11 +120,12 @@ Question: {query}
 
 Answer:"""
 
-    response = ollama.chat(
-        model="llama3.2",
+    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
         messages=[{"role": "user", "content": prompt}]
     )
-    return response["message"]["content"]
+    return response.choices[0].message.content
 
 with st.sidebar:
     st.header("Documents")
