@@ -9,8 +9,22 @@ import fitz
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
 st.set_page_config(page_title="RAG Chatbot", layout="wide")
-st.title("Document Q&A")
-st.caption("Upload PDFs and ask questions across your documents")
+
+st.markdown("""
+    <div style="padding: 1rem 0 0.5rem 0;">
+        <h1 style="margin-bottom: 0.2rem;">📄 RAG Document Q&A</h1>
+        <p style="font-size: 1.1rem; color: gray; margin-bottom: 0.5rem;">
+            Ask questions across your documents — answers grounded in your content, never made up.
+        </p>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <span style="background: #e8f4f8; color: #1a6b8a; padding: 2px 10px; border-radius: 12px; font-size: 0.75rem;">🔍 Semantic Search</span>
+            <span style="background: #f0f0f0; color: #444; padding: 2px 10px; border-radius: 12px; font-size: 0.75rem;">⚡ Cross-Encoder Reranking</span>
+            <span style="background: #fff3e0; color: #e65100; padding: 2px 10px; border-radius: 12px; font-size: 0.75rem;">🦙 Llama 3.1 via Groq</span>
+            <span style="background: #e8f5e9; color: #2e7d32; padding: 2px 10px; border-radius: 12px; font-size: 0.75rem;">🗄️ ChromaDB</span>
+        </div>
+    </div>
+    <hr style="margin: 0.8rem 0;">
+""", unsafe_allow_html=True)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
