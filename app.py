@@ -2,6 +2,7 @@ import streamlit as st
 import chromadb
 from groq import Groq
 import os
+from io import BytesIO
 from dotenv import load_dotenv
 load_dotenv()
 import fitz
@@ -91,7 +92,7 @@ def retrieve_and_rerank(query, selected_docs, top_k_retrieve=3, top_k_rerank=3):
             pass
 
     if not all_chunks:
-        return [], []
+        return [], [], []
 
     reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
     pairs = [[query, chunk] for chunk in all_chunks]
@@ -101,7 +102,7 @@ def retrieve_and_rerank(query, selected_docs, top_k_retrieve=3, top_k_rerank=3):
     top_chunks = [chunk for chunk, source, score in scored[:top_k_rerank]]
     top_sources = [source for chunk, source, score in scored[:top_k_rerank]]
 
-    return top_chunks, top_sources
+    return top_chunks, top_sources, [s for _, _, s in scored[:top_k_rerank]]
 
 def generate_answer(query, chunks, sources):
     context_parts = []
@@ -145,6 +146,22 @@ with st.sidebar:
         else:
             st.info("This document is already uploaded.")
 
+    if not st.session_state.uploaded_docs:
+        st.divider()
+        st.caption("No PDF? Try the sample document:")
+        if st.button("Load sample: insomnia.pdf", type="secondary"):
+            sample_path = os.path.join(os.path.dirname(__file__), "insomnia.pdf")
+            with open(sample_path, "rb") as f:
+                sample_file = BytesIO(f.read())
+                sample_file.name = "insomnia.pdf"
+                collection_name, num_chunks = ingest_document(sample_file)
+                st.session_state.uploaded_docs.append({
+                    "name": "insomnia.pdf",
+                    "collection": collection_name,
+                    "chunks": num_chunks
+                })
+                st.rerun()
+
     if st.session_state.uploaded_docs:
         st.divider()
         st.subheader("Select documents to search")
@@ -180,12 +197,18 @@ if prompt := st.chat_input("Ask a question about your selected documents..."):
 
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
-                chunks, sources = retrieve_and_rerank(prompt, selected_docs)
+                chunks, sources, scores = retrieve_and_rerank(prompt, selected_docs)
                 answer = generate_answer(prompt, chunks, sources)
             st.write(answer)
             with st.expander("Sources"):
-                for i, (chunk, source) in enumerate(zip(chunks, sources)):
-                    st.caption(f"Chunk {i+1} — from **{source}**")
+                for i, (chunk, source, score) in enumerate(zip(chunks, sources, scores)):
+                    if score > 5:
+                        relevance = "High"
+                    elif score > 0:
+                        relevance = "Medium"
+                    else:
+                        relevance = "Low"
+                    st.caption(f"Chunk {i+1} — from **{source}** | Relevance: {relevance}")
                     st.caption(chunk[:200] + "...")
 
         st.session_state.messages.append({
