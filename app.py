@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 import fitz
 from sentence_transformers import SentenceTransformer, CrossEncoder
+
 @st.cache_resource
 def load_models():
     embedder = SentenceTransformer("all-MiniLM-L6-v2")
@@ -117,7 +118,6 @@ def retrieve_and_rerank(query, selected_docs, top_k_retrieve=3, top_k_rerank=3):
     if not all_chunks:
         return [], [], []
 
-    
     pairs = [[query, chunk] for chunk in all_chunks]
     scores = reranker.predict(pairs)
 
@@ -224,12 +224,15 @@ if prompt := st.chat_input("Ask a question about your selected documents..."):
             with st.spinner("Thinking..."):
                 chunks, sources, scores = retrieve_and_rerank(prompt, selected_docs)
                 stream = generate_answer(prompt, chunks, sources)
-		def stream_tokens():
-    			for chunk in stream:
-        			token = chunk.choices[0].delta.content
-       		 			if token:
-            					yield token
+
+            def stream_tokens():
+                for chunk in stream:
+                    token = chunk.choices[0].delta.content
+                    if token:
+                        yield token
+
             answer = st.write_stream(stream_tokens())
+
             with st.expander("Sources"):
                 for i, (chunk, source, score) in enumerate(zip(chunks, sources, scores)):
                     if score > 5:
