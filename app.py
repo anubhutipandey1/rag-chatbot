@@ -7,6 +7,15 @@ from dotenv import load_dotenv
 load_dotenv()
 import fitz
 from sentence_transformers import SentenceTransformer, CrossEncoder
+@st.cache_resource
+def load_models():
+    embedder = SentenceTransformer("all-MiniLM-L6-v2")
+    reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+    return embedder, reranker
+
+@st.cache_resource
+def get_chroma_client():
+    return chromadb.PersistentClient(path="./chroma_db")
 
 st.set_page_config(page_title="RAG Chatbot", layout="wide")
 
@@ -63,11 +72,11 @@ def ingest_document(uploaded_file):
         chunks = chunk_text(text)
 
     with st.spinner("Embedding chunks..."):
-        model = SentenceTransformer("all-MiniLM-L6-v2")
-        embeddings = model.encode(chunks, show_progress_bar=False)
+        embedder, _ = load_models()
+        embeddings = embedder.encode(chunks, show_progress_bar=False)
 
     with st.spinner("Storing in ChromaDB..."):
-        client = chromadb.PersistentClient(path="./chroma_db")
+        client = get_chroma_client()
         try:
             client.delete_collection(collection_name)
         except:
@@ -83,10 +92,10 @@ def ingest_document(uploaded_file):
     return collection_name, len(chunks)
 
 def retrieve_and_rerank(query, selected_docs, top_k_retrieve=3, top_k_rerank=3):
-    model = SentenceTransformer("all-MiniLM-L6-v2")
-    query_embedding = model.encode([query])[0]
+    embedder, reranker = load_models()
+    query_embedding = embedder.encode([query])[0]
 
-    client = chromadb.PersistentClient(path="./chroma_db")
+    client = get_chroma_client()
 
     all_chunks = []
     all_sources = []
@@ -108,7 +117,7 @@ def retrieve_and_rerank(query, selected_docs, top_k_retrieve=3, top_k_rerank=3):
     if not all_chunks:
         return [], [], []
 
-    reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+    
     pairs = [[query, chunk] for chunk in all_chunks]
     scores = reranker.predict(pairs)
 
