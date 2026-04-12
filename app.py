@@ -224,7 +224,12 @@ if prompt := st.chat_input("Ask a question about your selected documents..."):
             with st.spinner("Thinking..."):
                 chunks, sources, scores = retrieve_and_rerank(prompt, selected_docs)
                 stream = generate_answer(prompt, chunks, sources)
-            answer = st.write_stream(stream.text_stream)
+		def stream_tokens():
+    			for chunk in stream:
+        			token = chunk.choices[0].delta.content
+       		 			if token:
+            					yield token
+            answer = st.write_stream(stream_tokens())
             with st.expander("Sources"):
                 for i, (chunk, source, score) in enumerate(zip(chunks, sources, scores)):
                     if score > 5:
