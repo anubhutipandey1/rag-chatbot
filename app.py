@@ -145,11 +145,13 @@ Question: {query}
 Answer:"""
 
     client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-    response = client.chat.completions.create(
+    stream = client.chat.completions.create(
         model="llama-3.1-8b-instant",
-        messages=[{"role": "user", "content": prompt}]
+        messages=[{"role": "user", "content": prompt}],
+        stream=True
     )
-    return response.choices[0].message.content
+
+    return stream
 
 with st.sidebar:
     st.header("Documents")
@@ -221,8 +223,8 @@ if prompt := st.chat_input("Ask a question about your selected documents..."):
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 chunks, sources, scores = retrieve_and_rerank(prompt, selected_docs)
-                answer = generate_answer(prompt, chunks, sources)
-            st.write(answer)
+                stream = generate_answer(prompt, chunks, sources)
+            answer = st.write_stream(stream.text_stream)
             with st.expander("Sources"):
                 for i, (chunk, source, score) in enumerate(zip(chunks, sources, scores)):
                     if score > 5:
