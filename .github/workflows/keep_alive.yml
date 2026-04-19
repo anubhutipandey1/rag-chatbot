@@ -11,10 +11,9 @@ jobs:
     steps:
       - name: Ping Streamlit App
         run: |
-          curl -X GET "https://rag-chatbot-anubhuti.streamlit.app/" \
+          curl -X GET "https://rag-chatbot-anubhuti.streamlit.app/_stcore/health" \
             -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
             --max-time 30 \
             --retry 3 \
-            --max-redirs 5 \
             -o /dev/null \
             -w "%{http_code}"
